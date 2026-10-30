@@ -1,0 +1,53 @@
+{
+  "name": "@kuzzleio/storage-es-9",
+  "version": "1.0.0-beta.1",
+  "description": "Elasticsearch 9 storage driver for Kuzzle",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kuzzleio/storage-es-9.git"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "manifest.json",
+    "LICENSE.md",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "prettier --check .",
+    "prepack": "npm run build",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "peerDependencies": {
+    "kuzzle": ">=2.61.0-0 <3"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "9.5.1",
+    "bluebird": "^3.7.2",
+    "debug": "^4.4.3",
+    "didyoumean": "^1.2.2",
+    "lodash": "^4.17.21",
+    "ms": "^2.1.3",
+    "semver": "^7.7.3"
+  },
+  "devDependencies": {
+    "@types/bluebird": "^3.5.42",
+    "@types/debug": "^4.1.12",
+    "@types/didyoumean": "^1.2.3",
+    "@types/lodash": "^4.17.21",
+    "@types/node": "^22.18.0",
+    "@types/semver": "^7.7.1",
+    "kuzzle": "file:../kuzzle",
+    "prettier": "^3.9.7",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}
