@@ -43,3 +43,18 @@ jobs:
           SEMANTIC_RELEASE_NPM_PUBLISH: "true"
           SEMANTIC_RELEASE_SLACK_WEBHOOK: ${{ secrets.SEMANTIC_RELEASE_SLACK_WEBHOOK }}
         run: npx semantic-release
+
+  documentation-deploy:
+    name: Deploy the documentation
+    needs: [npm-deploy]
+    runs-on: ubuntu-24.04
+    steps:
+      # master deploys to docs.kuzzle.io, beta to next-docs.kuzzle.io
+      - uses: convictional/trigger-workflow-and-wait@v1.6.3
+        with:
+          owner: kuzzleio
+          repo: documentation
+          github_token: ${{ secrets.ACCESS_TOKEN_CI }}
+          workflow_file_name: child_repo.workflow.yml
+          ref: ${{ github.ref_name == 'master' && 'master' || 'develop' }}
+          client_payload: '{"repo_name":"storage-es-9","branch":"${{ github.ref_name }}","version":"1"}'

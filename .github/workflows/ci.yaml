@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Conformance (Elasticsearch ${{ matrix.elasticsearch }})
+    name: Unit + conformance (Elasticsearch ${{ matrix.elasticsearch }})
     runs-on: ubuntu-24.04
     strategy:
       matrix:
