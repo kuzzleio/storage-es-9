@@ -1,4 +1,4 @@
-# @kuzzleio/storage-es-9
+# kuzzle-storage-es-9
 
 The Elasticsearch 9 storage driver for [Kuzzle](https://github.com/kuzzleio/kuzzle) 2.
 
@@ -9,7 +9,7 @@ Elasticsearch 8 driver on the Elasticsearch 9 client: same mappings, same querie
 ## Install
 
 ```bash
-npm install @kuzzleio/storage-es-9
+npm install kuzzle-storage-es-9
 ```
 
 Then select it in your `.kuzzlerc`, with the address of your Elasticsearch 9 cluster:
@@ -18,7 +18,7 @@ Then select it in your `.kuzzlerc`, with the address of your Elasticsearch 9 clu
 {
   "services": {
     "storageEngine": {
-      "driver": "@kuzzleio/storage-es-9",
+      "driver": "kuzzle-storage-es-9",
       "client": { "node": "http://localhost:9200" }
     }
   }

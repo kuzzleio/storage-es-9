@@ -1,5 +1,5 @@
 {
-  "name": "@kuzzleio/storage-es-9",
+  "name": "kuzzle-storage-es-9",
   "version": "1.0.0-beta.1",
   "description": "Elasticsearch 9 storage driver for Kuzzle",
   "license": "Apache-2.0",
