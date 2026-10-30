@@ -47,6 +47,7 @@
     "@types/semver": "^7.7.1",
     "kuzzle": "file:../kuzzle",
     "prettier": "^3.9.7",
+    "semantic-release-config-kuzzle": "1.8.0",
     "typescript": "6.0.3",
     "vitest": "5.0.5"
   }
