@@ -4,10 +4,11 @@ on:
   push:
     branches: [master, beta]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
-    name: Conformance (Elasticsearch ${{ matrix.elasticsearch }})
+    name: Unit + conformance (Elasticsearch ${{ matrix.elasticsearch }})
     runs-on: ubuntu-24.04
     strategy:
       matrix:

@@ -1,0 +1,12 @@
+{
+  // The specs, type-checked by `npm run typecheck`. Same standard as `lib/`
+  // but for `noUncheckedIndexedAccess`: the unit suite reads back the mock
+  // calls it has just made, as in Kuzzle's own test program.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": false,
+    "declaration": false,
+    "noEmit": true
+  },
+  "include": ["lib", "test"]
+}
