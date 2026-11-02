@@ -1,3 +1,9 @@
+## [1.1.0-beta.2](https://github.com/kuzzleio/storage-es-9/compare/v1.1.0-beta.1...v1.1.0-beta.2) (2026-11-02)
+
+### Features
+
+* close the engine client on Kuzzle's shutdown ([2769f91](https://github.com/kuzzleio/storage-es-9/commit/2769f91e659b3d3797ee3bdace448b52f158a797)), closes [kuzzleio/kuzzle#3141](https://github.com/kuzzleio/kuzzle/issues/3141)
+
 ## [1.1.0-beta.1](https://github.com/kuzzleio/storage-es-9/compare/v1.0.0...v1.1.0-beta.1) (2026-11-02)
 
 ### Dependencies
