@@ -1993,7 +1993,7 @@ export class ES9 {
     await this._client.indices.close(esRequest);
 
     try {
-      await this._client.indices.putSettings({ ...esRequest, body: settings });
+      await this._client.indices.putSettings({ ...esRequest, settings });
     } catch (error) {
       throw this._esWrapper.formatESError(error);
     } finally {
