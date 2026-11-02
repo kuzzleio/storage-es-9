@@ -1864,7 +1864,14 @@ export class ES9 {
    */
   getAllowedIndexSettings(
     indexSettings: estypes.IndicesIndexSettings | undefined,
-  ) {
+  ): {
+    // The built-in `Omit`, not lodash's: the declarations this package ships
+    // must not need `@types/lodash`, a devDependency.
+    index: Omit<
+      estypes.IndicesIndexSettings,
+      "creation_date" | "provided_name" | "uuid" | "version"
+    >;
+  } {
     return {
       index: _.omit(indexSettings?.index, [
         "creation_date",
