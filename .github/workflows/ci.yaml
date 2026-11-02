@@ -1,16 +1,18 @@
 name: CI
 
 on:
-  push:
-    branches: [master, beta]
   pull_request:
   workflow_dispatch:
+  # A push to master or beta is tested by release.yaml, which calls this
+  # workflow and publishes only once it passed.
+  workflow_call:
 
 jobs:
   test:
     name: Unit + conformance (Elasticsearch ${{ matrix.elasticsearch }})
     runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         elasticsearch: ["9.0.8", "9.5.5"]
     services:
@@ -26,8 +28,8 @@ jobs:
           --health-cmd "curl -fs http://localhost:9200/_cluster/health?wait_for_status=yellow"
           --health-interval 5s --health-timeout 5s --health-retries 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -35,6 +37,17 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+      # The declarations this package ships must not need a devDependency's
+      # types (`@types/lodash`): TS7016 for users with `skipLibCheck: false`.
+      - name: Shipped declarations import no devDependency
+        run: '! grep -rlE --include=''*.d.ts'' ''from "(lodash|bluebird)'' dist'
       - run: npm test
         env:
           ELASTICSEARCH_NODE: http://localhost:9200
+
+  drift:
+    name: Shared files (drift guard)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: scripts/check-drift.sh
