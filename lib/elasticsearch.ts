@@ -43,7 +43,6 @@ import assert from "assert";
 
 import Bluebird from "bluebird";
 import ms from "ms";
-import semver from "semver";
 
 import type { StorageEngineElasticsearch, ValidatedTarget } from "kuzzle";
 import {
@@ -61,6 +60,7 @@ import {
   randomNumber,
 } from "./helpers";
 import ESWrapper from "./esWrapper";
+import { isSupportedElasticsearch } from "./version";
 
 const SCROLL_CACHE_PREFIX = "_docscroll_";
 
@@ -228,12 +228,8 @@ export class ES9 {
 
     const { version } = await this._client.info();
 
-    if (version) {
-      const coerced = semver.coerce(version.number);
-
-      if (coerced === null || !semver.satisfies(coerced, ">=9.0.0")) {
-        throw storageError.get("version_mismatch", version.number);
-      }
+    if (version && !isSupportedElasticsearch(version)) {
+      throw storageError.get("version_mismatch", version.number);
     }
 
     this._esVersion = version;
