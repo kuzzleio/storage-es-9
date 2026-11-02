@@ -1007,11 +1007,9 @@ export function describeLifecycle(harness: ESHarness) {
     const newSettings = { index: { blocks: { write: true } } };
 
     /*
-     * ⚠️ `body:` on **both** versions, and it is not a mistake in the port.
-     * Every other ES 8 call site moved its payload to the root; this one
-     * still wraps it, so the envelope is deliberately not used here — using
-     * it would have made the case pass while asserting something the subject
-     * does not do.
+     * `body:` up to ES 8, whose driver never moved this call's payload to the
+     * root, `settings:` on ES 9, whose client dropped `body` — the envelope's
+     * `settingsRequest`.
      */
     it("writes the settings on the alias and answers nothing", async () => {
       expect(
@@ -1020,7 +1018,10 @@ export function describeLifecycle(harness: ESHarness) {
 
       expect(
         harness.sent(harness.clientStub.indices.putSettings),
-      ).toMatchObject({ index: alias, body: newSettings });
+      ).toMatchObject({
+        index: alias,
+        ...harness.envelope.settingsRequest(newSettings),
+      });
     });
 
     /*

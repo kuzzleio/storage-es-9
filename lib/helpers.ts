@@ -1,5 +1,5 @@
 /*
- * Small helpers the Elasticsearch 8 driver imports from Kuzzle's internals,
+ * Small helpers the storage drivers import from Kuzzle's internals,
  * copied as they are: they are not part of what `kuzzle` exports.
  */
 
@@ -38,6 +38,13 @@ export function didYouMean(str: string, list: readonly string[]): string {
   }
 
   return ` Did you mean "${result}"?`;
+}
+
+/** Resolves after `ms` milliseconds (what `Bluebird.delay` did) */
+export function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 export function randomNumber(max: number): number {

@@ -23,23 +23,20 @@
 
 import { inspect } from "node:util";
 
-import Bluebird from "bluebird";
 import get from "lodash/get";
 import type { Client } from "@elastic/elasticsearch";
 import { errors as esErrors } from "@elastic/elasticsearch";
 import type { JSONObject } from "kuzzle";
 import { KuzzleError, storageError } from "kuzzle";
 
+import { errorMessagesMapping } from "./esErrorMapping";
+import type { ThrownESError } from "./esErrorMapping";
 import { createDebug } from "./helpers";
 
 const debug = createDebug("kuzzle:services:storage:es9");
 
-/**
- * What the Elasticsearch client throws: an Error, carrying the server's
- * response on `meta` for the ones that came back from the cluster. `catch`
- * hands callers `unknown`, and this is the shape every reader below assumes.
- */
-type ThrownESError = Error & { meta?: JSONObject; body?: JSONObject };
+/** The engine, as the messages below name it */
+const ENGINE = "Elasticsearch";
 
 /**
  * One that came back from the cluster rather than from the client itself, so
@@ -78,8 +75,8 @@ function describeUnreadableError(error: ThrownESError): string {
 
   let description =
     statusCode === undefined
-      ? "Elasticsearch request failed"
-      : `Elasticsearch responded ${statusCode}`;
+      ? `${ENGINE} request failed`
+      : `${ENGINE} responded ${statusCode}`;
 
   description += hasBody
     ? `: ${inspect(body, { breakLength: Infinity, depth: 3 })}`
@@ -89,154 +86,6 @@ function describeUnreadableError(error: ThrownESError): string {
     ? `${error.name}: ${description}`
     : description;
 }
-
-interface ESErrorMapping {
-  regex: RegExp;
-  /**
-   * The `services.storage` error this elasticsearch message maps to.
-   *
-   * Required, and spelled one way. One entry declared `subCode` while the
-   * reader has always asked for `subcode`, so the rejected-execution mapping
-   * answered `undefined` and `storageError.get` fell through to
-   * `core.fatal.unexpected_error` — `too_many_operations` was unreachable.
-   */
-  subcode: string;
-  getPlaceholders: (
-    esError: ThrownESError,
-    matches: RegExpMatchArray,
-  ) => Array<string | undefined>;
-}
-
-const errorMessagesMapping: ESErrorMapping[] = [
-  {
-    regex:
-      /^\[es_rejected_execution_exception] rejected execution .*? on EsThreadPoolExecutor\[(.*?), .*$/,
-    subcode: "too_many_operations",
-    getPlaceholders: (esError, matches) => [matches[1]],
-  },
-  {
-    // [illegal_argument_exception] object mapping [titi] can't be changed from nested to non-nested
-    regex:
-      /^\[illegal_argument_exception] object mapping \[(.*?)] can't be changed from nested to non-nested$/,
-    subcode: "cannot_change_mapping",
-    getPlaceholders: (esError, matches) => [matches[1]],
-  },
-  {
-    // [illegal_argument_exception] object mapping [baz] can't be changed from non-nested to nested
-    regex:
-      /^\[illegal_argument_exception] object mapping \[(.*?)] can't be changed from non-nested to nested$/,
-    subcode: "cannot_change_mapping",
-    getPlaceholders: (esError, matches) => [matches[1]],
-  },
-  {
-    // [illegal_argument_exception] Can't merge a non object mapping [aeaze] with an object mapping [aeaze]
-    regex:
-      /^\[illegal_argument_exception] Can't merge a non object mapping \[(.*?)] with an object mapping \[(.*?)]$/,
-    subcode: "cannot_change_mapping",
-    getPlaceholders: (esError, matches) => [matches[1]],
-  },
-  {
-    // [illegal_argument_exception] [tutu.tutu] is defined as an object in mapping [aze] but this name is already used for a field in other types
-    regex:
-      /^\[illegal_argument_exception] \[(.*?)] is defined as an object in mapping \[(.*?)] but this name is already used for a field in other types$/,
-    subcode: "duplicate_field_mapping",
-    getPlaceholders: (esError, matches) => [matches[1], matches[2]],
-  },
-  {
-    // [illegal_argument_exception] mapper [source.flags] of different type, current_type [string], merged_type [long]
-    regex:
-      /^mapper \[(.*?)] of different type, current_type \[(.*?)], merged_type \[(.*?)]$/,
-    subcode: "cannot_change_mapping",
-    getPlaceholders: (esError, matches) => [matches[1]],
-  },
-  {
-    // [mapper_parsing_exception] Mapping definition for [flags] has unsupported parameters:  [index : not_analyzed]
-    // eslint-disable-next-line no-regex-spaces
-    regex:
-      /^\[mapper_parsing_exception] Mapping definition for \[(.*?)] has unsupported parameters: \[(.*?)]$/,
-    subcode: "unexpected_properties",
-    getPlaceholders: (esError, matches) => [matches[2], matches[1]],
-  },
-  {
-    // [mapper_parsing_exception] No handler for type [boolean] declared on field [not]
-    regex:
-      /^\[mapper_parsing_exception] No handler for type \[(.*?)] declared on field \[(.*?)]$/,
-    subcode: "invalid_mapping_type",
-    getPlaceholders: (esError, matches) => [matches[2], matches[1]],
-  },
-  {
-    // [mapper_parsing_exception] failed to parse [conditions.host.flags]
-    regex: /^\[mapper_parsing_exception] failed to parse \[(.*?)]$/,
-    subcode: "wrong_mapping_property",
-    getPlaceholders: (esError, matches) => [matches[1]],
-  },
-  {
-    // Failed to parse mapping [_doc]: Expected map for property [fields] on field [enabled] but got a class java.lang.String
-    regex:
-      /^Failed to parse mapping \[.*\]: Expected \w+ for property \[(.*)\] on field \[(.*)\]/,
-    subcode: "wrong_mapping_property",
-    getPlaceholders: (esError, matches) => [`${matches[2]}.${matches[1]}`],
-  },
-  {
-    // [index_not_found_exception] no such index, with { resource.type=index_or_alias & resource.id=foso & index=foso }
-    regex: /^no such index \[([%&])([^\]]*)\.([^.\]]*)\]$/,
-    subcode: "unknown_collection",
-    getPlaceholders: (esError, matches) => [matches[2], matches[3]],
-  },
-  {
-    // [mapper_parsing_exception] Expected map for property [fields] on field [foo] but got a class java.lang.String
-    regex:
-      /^\[mapper_parsing_exception] Expected map for property \[(.*?)] on field \[(.*?)] but got a class java\.lang\.String$/,
-    subcode: "wrong_mapping_property",
-    getPlaceholders: (esError, matches) => [`${matches[2]}.${matches[1]}`],
-  },
-  {
-    regex:
-      /^\[version_conflict_engine_exception] \[data]\[(.*?)]: version conflict.*$/,
-    subcode: "too_many_changes",
-    getPlaceholders: (esError, matches) => [matches[1]],
-  },
-  {
-    //[liia]: version conflict, document already exists (current version [2])
-    regex: /^\[(.*)\]: version conflict, document already exists.*/,
-    subcode: "document_already_exists",
-    getPlaceholders: () => [],
-  },
-  {
-    // Unknown key for a START_OBJECT in [term].
-    regex: /^Unknown key for a START_OBJECT in \[(.*)\].*/,
-    subcode: "invalid_search_query",
-    getPlaceholders: (esError, matches) => [matches[1]],
-  },
-  {
-    // [_doc] mapping set to strict, dynamic introduction of [lehuong] within [_doc] is not allowed
-    regex:
-      /^\[(.+)\] mapping set to strict, dynamic introduction of \[(.+)\] within \[.+\] is not allowed/,
-    subcode: "strict_mapping_rejection",
-    getPlaceholders: (esError, matches) => {
-      // "/%26index.collection/_doc"
-      const esPath: string = get(esError, "meta.meta.request.params.path", "");
-      // keep only "index"
-      const index = esPath.split(".")[0]?.split("%26")[1];
-      // keep only "collection"
-      const collection = esPath.substr(esPath.indexOf(".") + 1).split("/")[0];
-
-      return [matches[2], index, collection];
-    },
-  },
-  {
-    // [and] query malformed, no start_object after query name
-    regex: /^\[(.*)\] query malformed, no start_object after query name/,
-    subcode: "unknown_query_keyword",
-    getPlaceholders: (esError, matches) => [matches[1]],
-  },
-  {
-    // no [query] registered for [equals]
-    regex: /^no \[query\] registered for \[(.*)\]/,
-    subcode: "unknown_query_keyword",
-    getPlaceholders: (esError, matches) => [matches[1]],
-  },
-];
 
 class ESWrapper {
   public client: Client;
@@ -264,7 +113,7 @@ class ESWrapper {
       error instanceof Error ? error : new Error(inspect(error));
 
     global.kuzzle.emit("services:storage:error", {
-      message: `Elasticsearch Client error: ${esError.message}`,
+      message: `${ENGINE} Client error: ${esError.message}`,
       // /!\ not all ES error classes have a "meta" property
       meta: esError.meta || null,
       stack: esError.stack,
@@ -315,7 +164,7 @@ class ESWrapper {
   }
 
   reject(error: unknown): Promise<never> {
-    return Bluebird.reject(this.formatESError(error));
+    return Promise.reject(this.formatESError(error));
   }
 
   _handleConflictError(
