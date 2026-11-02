@@ -13,18 +13,24 @@
  * | `lifecycle` | 11 — index and collection lifecycle, mappings, settings |
  * | `multi` | 9 — the `m*` family and the extraction they share |
  * | `internals` | the collection-emulation name arithmetic and query guards |
+ * | `engine` | the engine family `info()` names, and the `close()` hook |
  */
 import { describe } from "vitest";
 
 import { setupElasticsearch, type ESDriver, type ESVersion } from "./harness";
 import { describeCrud } from "./crud";
+import { describeEngine, type ESEngine } from "./engine";
 import { describeInventory } from "./inventory";
 import { describeInternals } from "./internals";
 import { describeLifecycle } from "./lifecycle";
 import { describeMulti } from "./multi";
 import { describeQueries } from "./queries";
 
-export function describeElasticsearch(version: ESVersion, Driver: ESDriver) {
+export function describeElasticsearch(
+  version: ESVersion,
+  Driver: ESDriver,
+  engine: ESEngine = "elasticsearch",
+) {
   describe(`Elasticsearch ${version} driver`, () => {
     const harness = setupElasticsearch(version, Driver);
 
@@ -34,5 +40,6 @@ export function describeElasticsearch(version: ESVersion, Driver: ESDriver) {
     describeLifecycle(harness);
     describeMulti(harness);
     describeInternals(harness);
+    describeEngine(harness, engine);
   });
 }

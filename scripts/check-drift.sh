@@ -32,6 +32,7 @@ SHARED_FILES=(
   test/mocks/elasticsearchClient.ts
   test/mocks/kuzzle.ts
   test/unit/elasticsearchCases/crud.ts
+  test/unit/elasticsearchCases/engine.ts
   test/unit/elasticsearchCases/envelope.ts
   test/unit/elasticsearchCases/harness.ts
   test/unit/elasticsearchCases/index.ts
