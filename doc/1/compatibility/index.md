@@ -18,7 +18,8 @@ description: Versions and capabilities of the Elasticsearch 9 storage driver
 | Node.js              | 22.12 or later                                                      |
 
 At startup, Kuzzle reads the driver's `manifest.json` before loading it, and does not start when its version is out of
-the `kuzzleVersion` range. The driver then refuses an Elasticsearch cluster older than 9.0.0.
+the `kuzzleVersion` range. The driver then refuses an Elasticsearch cluster outside 9.x (older than 9.0.0, or 10.0.0 and
+later), and an OpenSearch cluster.
 
 Kuzzle does not pin this driver: you choose its version in your application's `package.json`.
 

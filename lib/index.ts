@@ -33,8 +33,24 @@ export class ES9Driver extends ES9 implements StorageDriver {
     return new Client(clientConfig);
   }
 
+  /** The close under way, which every `close()` call answers */
+  private closing: Promise<void> | undefined;
+
   init(): Promise<void> {
     return this._initSequence();
+  }
+
+  /**
+   * Releases the engine connections. Kuzzle (2.61 and later) calls it once, on
+   * a graceful shutdown, possibly before `init()` resolved: closes the client
+   * `init()` built, if it built one, and only once.
+   */
+  close(): Promise<void> {
+    this.closing ??= (async () => {
+      await this._client?.close();
+    })();
+
+    return this.closing;
   }
 }
 

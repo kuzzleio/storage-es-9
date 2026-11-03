@@ -17,6 +17,7 @@
  * | a scrolled batch | a callback the client calls back | a promise |
  * | an active shard count | `"1"` | `1` |
  * | alias actions | `body: { actions }` | ES 8: the same, ES 9: `actions` at the root |
+ * | index settings | `body: { … }` | ES 8: the same, ES 9: `settings: { … }` |
  *
  * The cases are shared and the delta is a **value they read**, rather than a
  * helper that hides it: the envelope is what distinguishes the majors, so
@@ -114,6 +115,13 @@ export interface ESEnvelope {
    * on ES 9, whose client dropped `body`.
    */
   aliasRequest(payload: JSONObject): JSONObject;
+
+  /**
+   * How `updateSettings` carries the settings to `indices.putSettings`: under
+   * `body` up to ES 8, which never moved that call's payload, as `settings` on
+   * ES 9, whose client dropped `body`.
+   */
+  settingsRequest(settings: JSONObject): JSONObject;
 }
 
 export const ES7_ENVELOPE: ESEnvelope = {
@@ -134,6 +142,7 @@ export const ES7_ENVELOPE: ESEnvelope = {
       callback(null, { body: payload }),
     ),
   aliasRequest: (payload) => ({ body: payload }),
+  settingsRequest: (settings) => ({ body: settings }),
 };
 
 export const ES8_ENVELOPE: ESEnvelope = {
@@ -151,12 +160,14 @@ export const ES8_ENVELOPE: ESEnvelope = {
   reportedFailure: { id: "_id2", reason: "error" },
   answerScroll: (stub, payload) => stub.mockResolvedValue(payload),
   aliasRequest: (payload) => ({ body: payload }),
+  settingsRequest: (settings) => ({ body: settings }),
 };
 
 export const ES9_ENVELOPE: ESEnvelope = {
   ...ES8_ENVELOPE,
   version: "9",
   aliasRequest: (payload) => ({ ...payload }),
+  settingsRequest: (settings) => ({ settings }),
 };
 
 export const ENVELOPES: Record<"7" | "8" | "9", ESEnvelope> = {

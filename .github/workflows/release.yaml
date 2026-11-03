@@ -7,8 +7,15 @@ on:
       - beta
 
 jobs:
+  # The CI workflow, unit and conformance suites included: nothing is published
+  # unless it passes on the commit being released.
+  test:
+    name: Test
+    uses: ./.github/workflows/ci.yaml
+
   npm-deploy:
     name: Build and deploy release on NPM.js
+    needs: [test]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -17,10 +24,10 @@ jobs:
       id-token: write
     steps:
       - name: Checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Node version 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: "https://registry.npmjs.org"

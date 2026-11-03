@@ -35,7 +35,8 @@ before: see [Configuration](https://docs.kuzzle.io/drivers/storage-es-9/1/config
 
 ## Requirements
 
-- Kuzzle 2.61 or later, within Kuzzle 2
+- Kuzzle 2.61 or later, within Kuzzle 2. Older versions do not know `services.storageEngine.driver` and silently
+  ignore it: they run the Elasticsearch code they embed, not this package.
 - Elasticsearch 9.x (tested on 9.0.8 and 9.5.5)
 - Node.js 22.12 or later
 
@@ -76,6 +77,17 @@ npm test            # the unit suite and Kuzzle's conformance kit, against ELAST
 the [storage-es-7](https://github.com/kuzzleio/storage-es-7), [storage-es-8](https://github.com/kuzzleio/storage-es-8)
 and [storage-es-9](https://github.com/kuzzleio/storage-es-9) repositories: only `test/unit/elasticsearch.test.ts` and
 `test/unit/esWrapper.test.ts` name their driver.
+
+### Shared code
+
+The five storage drivers ([storage-es-7](https://github.com/kuzzleio/storage-es-7),
+[storage-es-8](https://github.com/kuzzleio/storage-es-8), [storage-es-9](https://github.com/kuzzleio/storage-es-9),
+[storage-opensearch-2](https://github.com/kuzzleio/storage-opensearch-2),
+[storage-opensearch-3](https://github.com/kuzzleio/storage-opensearch-3)) share most of their code. A drift guard,
+`npm run check:drift` (run by the CI), checks that the shared files listed in `scripts/check-drift.sh` are identical to
+their canonical copy, in `storage-es-8` at the commit `scripts/drift.env` pins; `ALLOW` there lists the shared files
+a repository deliberately keeps different. To change a shared file, change it in `storage-es-8` first, copy it to the
+other drivers, then move `CANONICAL_REF` to that commit in all five.
 
 To write a driver for another engine, see
 [Write a storage driver](https://docs.kuzzle.io/core/2/guides/write-storage-drivers/).
