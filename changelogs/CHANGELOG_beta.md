@@ -1,3 +1,9 @@
+## [1.1.1-beta.1](https://github.com/kuzzleio/storage-es-9/compare/v1.1.0...v1.1.1-beta.1) (2026-11-12)
+
+### Bug Fixes
+
+* report why the engine does not answer at startup, and fail on what waiting cannot fix ([38390f7](https://github.com/kuzzleio/storage-es-9/commit/38390f71feb463ee4b3920cc7a4984389762d058)), closes [kuzzleio/storage-es-8#9](https://github.com/kuzzleio/storage-es-8/issues/9)
+
 ## [1.1.0-beta.2](https://github.com/kuzzleio/storage-es-9/compare/v1.1.0-beta.1...v1.1.0-beta.2) (2026-11-02)
 
 ### Features
