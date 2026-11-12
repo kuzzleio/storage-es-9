@@ -21,9 +21,14 @@ description: Diagnose the Elasticsearch 9 storage driver
 ## Kuzzle cannot reach Elasticsearch
 
 Kuzzle waits for the cluster at startup, and gives up after `services.storageEngine.initTimeout` (or
-`services.common.defaultInitTimeout`, 2 minutes by default). Check `client.node` from the machine running Kuzzle
-(`curl <node>/_cluster/health`), and the authentication and TLS options of `client`. Once started, a request reaching
-a disconnected cluster gets a [services.storage.not_connected](/core/2/api/errors/error-codes/services) error.
+`services.common.defaultInitTimeout`, 2 minutes by default). While it waits, the driver logs why the cluster does not
+answer yet, as a warning (`[⚠] Elasticsearch is not reachable yet: <reason>`). It does not wait for what waiting cannot
+fix: a TLS failure (untrusted or expired certificate, host name missing from the certificate) or credentials the cluster
+refuses (401, 403) stop the startup at once, with a
+[services.storage.unexpected_error](/core/2/api/errors/error-codes/services) error naming the cause. Check `client.node`
+from the machine running Kuzzle (`curl <node>/_cluster/health`), and the authentication and TLS options of `client`.
+Once started, a request reaching a disconnected cluster gets a
+[services.storage.not_connected](/core/2/api/errors/error-codes/services) error.
 
 ## Errors returned by the API
 

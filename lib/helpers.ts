@@ -123,3 +123,72 @@ export function createDebug(namespace: string) {
 
   return debug;
 }
+
+/*
+ * What a failed connection to the storage engine looks like through the
+ * clients. The TLS error code is lost on the way: every client wraps the
+ * socket error in a `ConnectionError` that keeps its message only, so the
+ * messages are matched too ("self-signed certificate", "unable to verify the
+ * first certificate", "certificate has expired", "Hostname/IP does not match
+ * certificate's altnames", ...).
+ */
+const TLS_ERROR_CODE =
+  /^(ERR_TLS_|ERR_SSL_|CERT_|UNABLE_TO_VERIFY_|UNABLE_TO_GET_ISSUER_|DEPTH_ZERO_SELF_SIGNED_CERT$|SELF_SIGNED_CERT_IN_CHAIN$)/;
+const TLS_ERROR_MESSAGE = /certificate|Hostname\/IP does not match/i;
+
+interface ConnectionFailure {
+  cause?: { code?: unknown };
+  code?: unknown;
+  message?: unknown;
+  meta?: { statusCode?: unknown };
+  statusCode?: unknown;
+}
+
+/**
+ * Whether an error met while waiting for the storage engine is one that
+ * waiting will not fix: a TLS failure (untrusted or mismatching certificate),
+ * or credentials the engine refuses (401, 403). A refused connection, a
+ * timeout or a 503 is a cluster that is not up yet.
+ */
+export function isPermanentConnectionError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const failure = error as ConnectionFailure;
+  const status = failure.statusCode ?? failure.meta?.statusCode;
+
+  if (status === 401 || status === 403) {
+    return true;
+  }
+
+  for (const code of [failure.code, failure.cause?.code]) {
+    if (typeof code === "string" && TLS_ERROR_CODE.test(code)) {
+      return true;
+    }
+  }
+
+  // An answer means the TLS handshake succeeded: only a socket error's
+  // message can describe a certificate problem
+  return (
+    !status &&
+    typeof failure.message === "string" &&
+    TLS_ERROR_MESSAGE.test(failure.message)
+  );
+}
+
+/**
+ * The text of whatever a client threw, for a log line, with the HTTP status
+ * when the engine answered: a refusal's message is often only its type
+ * ("security_exception")
+ */
+export function errorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return util.inspect(error);
+  }
+
+  const failure = error as ConnectionFailure;
+  const status = failure.statusCode ?? failure.meta?.statusCode;
+
+  return status ? `${error.message} (HTTP ${String(status)})` : error.message;
+}
