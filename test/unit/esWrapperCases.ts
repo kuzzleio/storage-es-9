@@ -437,7 +437,7 @@ export function describeESWrapper(
             "unknown query [equals] did you mean [term]?",
             400,
             "services.storage.unknown_query_keyword",
-            'The keyword "equals" is not part of Elasticsearch Query DSL. Are you trying to use a Koncorde query?',
+            'The keyword "equals" is not part of the storage engine Query DSL. Are you trying to use a Koncorde query?',
           ],
         ])("recognises %s", (_, reason, statusCode, id, message) => {
           expect(
