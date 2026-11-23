@@ -1675,7 +1675,11 @@ export class ES9 {
     settings: estypes.IndicesIndexSettings,
   ) {
     await this.waitForCollectionShards(index, collection);
-    return this.updateCollection(index, collection, { mappings, settings });
+    await this.updateCollection(index, collection, { mappings, settings });
+
+    // `createCollection` answers `null`, whichever way the collection came
+    // to exist: only `updateCollection` reports a re-indexation task.
+    return null;
   }
 
   /**
@@ -1792,11 +1796,16 @@ export class ES9 {
   /**
    * Updates a collection mappings and settings
    *
-   * @param {String} index - Index name
-   * @param {String} collection - Collection name
-   * @param {Object} config - mappings ({}), settings ({})
+   * When the update re-indexes the collection (`reindexCollection`, or a
+   * `dynamic` that opens up), the re-indexation runs as an engine background
+   * task: its id is returned, so that the caller can follow it.
    *
-   * @returns {Promise}
+   * @param index - Index name
+   * @param collection - Collection name
+   * @param config - mappings ({}), settings ({}), reindexCollection (false)
+   *
+   * @returns `{ reindexTaskId }` when a re-indexation was started (the id of
+   *   its engine task, set whenever the engine reports one), `null` otherwise
    */
   async updateCollection(
     index: string,
@@ -1810,7 +1819,7 @@ export class ES9 {
       reindexCollection?: boolean;
       settings?: estypes.IndicesIndexSettings;
     } = {},
-  ) {
+  ): Promise<{ reindexTaskId?: string } | null> {
     const esRequest: estypes.IndicesGetSettingsRequest = {
       index: await this._getIndice(index, collection),
     };
@@ -1831,6 +1840,8 @@ export class ES9 {
       await this.updateSettings(index, collection, settings);
     }
 
+    let reindex: { reindexTaskId?: string } | null = null;
+
     try {
       if (!_.isEmpty(mappings)) {
         const previousMappings = await this.getMapping(index, collection, {
@@ -1843,7 +1854,10 @@ export class ES9 {
           reindexCollection ||
           this._dynamicChanges(previousMappings, mappings)
         ) {
-          await this.updateSearchIndex(index, collection);
+          const { taskId } =
+            (await this.updateSearchIndex(index, collection)) ?? {};
+
+          reindex = taskId === undefined ? {} : { reindexTaskId: taskId };
         }
       }
     } catch (error) {
@@ -1857,7 +1871,7 @@ export class ES9 {
       throw error;
     }
 
-    return null;
+    return reindex;
   }
 
   /**
@@ -1889,11 +1903,20 @@ export class ES9 {
   /**
    * Sends an empty UpdateByQuery request to update the search index
    *
-   * @param {String} index - Index name
-   * @param {String} collection - Collection name
-   * @returns {Promise.<Object>} {}
+   * The request runs as an engine background task
+   * (`wait_for_completion: false`): it is only started here, and its progress
+   * can be followed with the tasks API, by the returned task id.
+   *
+   * @param index - Index name
+   * @param collection - Collection name
+   * @returns `{ taskId }`: the id of the engine task re-indexing the
+   *   collection (`<node id>:<task number>`). The engine always reports it for
+   *   a background update-by-query; it is left out if it ever does not.
    */
-  async updateSearchIndex(index: string, collection: string) {
+  async updateSearchIndex(
+    index: string,
+    collection: string,
+  ): Promise<{ taskId?: string }> {
     const esRequest: estypes.UpdateByQueryRequest = {
       // @cluster: conflicts when two nodes start at the same time
       conflicts: "proceed",
@@ -1907,11 +1930,17 @@ export class ES9 {
 
     this.logger.debug("UpdateByQuery: %o", esRequest);
 
+    let response;
+
     try {
-      await this._client.updateByQuery(esRequest);
+      response = await this._client.updateByQuery(esRequest);
     } catch (error) {
       throw this._esWrapper.formatESError(error);
     }
+
+    const task = response?.task;
+
+    return task === undefined || task === null ? {} : { taskId: String(task) };
   }
 
   /**

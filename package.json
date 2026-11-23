@@ -1,6 +1,6 @@
 {
   "name": "kuzzle-storage-es-9",
-  "version": "1.1.1",
+  "version": "1.2.0-beta.1",
   "description": "Elasticsearch 9 storage driver for Kuzzle",
   "license": "Apache-2.0",
   "repository": {
@@ -45,7 +45,7 @@
     "@types/lodash": "^4.17.21",
     "@types/node": "^22.18.0",
     "@types/semver": "^7.7.1",
-    "kuzzle": "2.61.0-beta.1",
+    "kuzzle": "2.61.2",
     "prettier": "^3.9.7",
     "semantic-release-config-kuzzle": "1.8.0",
     "typescript": "6.0.3",
