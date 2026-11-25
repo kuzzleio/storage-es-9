@@ -59,8 +59,8 @@ Or, through an environment variable: `kuzzle_services__storageEngine__search__ad
 
 `min_score` and `track_scores` rely on the relevance score:
 
-- a [Koncorde query](/core/2/api/koncorde-filters-syntax) (`lang: "koncorde"`) is a filter, with no score: any
-  `min_score` above 0 answers no document;
+- with `lang: "koncorde"`, the score comes from the query the filters are translated to: an `and`, for
+  instance, gives every document a score of 0, so any `min_score` above 0 leaves them all out;
 - leave them out of `document:count`: depending on the engine, a count request refuses them.
 
 ## Authentication and TLS
