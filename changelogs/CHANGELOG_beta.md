@@ -1,3 +1,9 @@
+## [1.2.0-beta.2](https://github.com/kuzzleio/storage-es-9/compare/v1.2.0-beta.1...v1.2.0-beta.2) (2026-11-25)
+
+### Features
+
+* **search:** allow min_score and track_scores, add search.additionalBodyKeys ([c18e585](https://github.com/kuzzleio/storage-es-9/commit/c18e5859375bc538fc68191e4b7916907aa0579f))
+
 ## [1.2.0-beta.1](https://github.com/kuzzleio/storage-es-9/compare/v1.1.1...v1.2.0-beta.1) (2026-11-23)
 
 ### Features
