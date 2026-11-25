@@ -21,10 +21,47 @@ None is specific to this driver:
 | `defaults.onUpdateConflictRetries` | `0`                                       | How many times an update is retried on a version conflict.                                                                                                       |
 | `defaults.scrollTTL`               | `"15s"`                                   | How long a paginated search's cursor lives.                                                                                                                      |
 | `generateMissingAliases`           | `true`                                    | Creates the aliases of the collections that have none, at startup (data created before Kuzzle 2.14).                                                             |
+| `search.additionalBodyKeys`        | `[]`                                      | Root keys a search body may use, on top of the default ones. See [Search body keys](#search-body-keys).                                                          |
 
 The full reference, with comments, is Kuzzle's
 [`.kuzzlerc.sample.jsonc`](https://github.com/kuzzleio/kuzzle/blob/master/.kuzzlerc.sample.jsonc). Each key can also
 be set through an environment variable, for example `kuzzle_services__storageEngine__client__node`.
+
+## Search body keys
+
+A search body may only use these root keys: `aggregations`, `aggs`, `collapse`, `explain`, `fields`, `from`,
+`highlight`, `min_score`, `post_filter`, `query`, `search_after`, `search_timeout`, `size`, `sort`, `suggest`,
+`track_scores`, `_name`, `_source`, `_source_excludes` and `_source_includes`. Any other key is refused with
+`services.storage.invalid_search_query`, before the request reaches the engine.
+
+`search.additionalBodyKeys` adds keys to that list, for every search of the application:
+
+```jsonc
+{
+  "services": {
+    "storageEngine": {
+      "search": {
+        "additionalBodyKeys": ["indices_boost", "rescore"],
+      },
+    },
+  },
+}
+```
+
+Or, through an environment variable: `kuzzle_services__storageEngine__search__additionalBodyKeys='*json:["rescore"]'`.
+
+- Inline scripts stay refused, under any key: only stored scripts are accepted.
+- Kuzzle refuses to start if the list is not an array of non-empty strings, or if it holds a key that Kuzzle sets on
+  every search request, or that exposes its internal indice names: `index`, `pit`, `profile`,
+  `rest_total_hits_as_int`, `routing`, `scroll`, `track_total_hits`.
+- Set the same list on every node of the cluster.
+- The driver does not check that the engine knows an added key: an unknown one is answered with the engine's own error.
+
+`min_score` and `track_scores` rely on the relevance score:
+
+- a [Koncorde query](/core/2/api/koncorde-filters-syntax) (`lang: "koncorde"`) is a filter, with no score: any
+  `min_score` above 0 answers no document;
+- leave them out of `document:count`: depending on the engine, a count request refuses them.
 
 ## Authentication and TLS
 
