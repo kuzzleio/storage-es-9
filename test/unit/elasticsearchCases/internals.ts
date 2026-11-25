@@ -473,6 +473,17 @@ export function describeInternals(harness: ESHarness) {
       );
     });
 
+    /* Full-text search: keep the score when sorting on something else, and
+     * drop the hits that are not relevant enough. */
+    it("allows min_score and track_scores by default", () => {
+      const searchBody = { min_score: 0.5, query: {}, track_scores: true };
+
+      expect(harness.client._sanitizeSearchBody({ ...searchBody })).toEqual({
+        ...searchBody,
+        query: { match_all: {} },
+      });
+    });
+
     /*
      * An inline script is code execution on the cluster, so it is refused
      * however deeply it is buried — the walk is the point, not the top-level
@@ -509,6 +520,83 @@ export function describeInternals(harness: ESHarness) {
       expect(harness.client._sanitizeSearchBody({ query: {} })).toEqual({
         query: { match_all: {} },
       });
+    });
+  });
+
+  describe("search.additionalBodyKeys", () => {
+    const configKey = "services.storageEngine.search.additionalBodyKeys";
+
+    const build = (additionalBodyKeys: unknown) => {
+      harness.config.search = { additionalBodyKeys };
+
+      return harness.build().driver as ESHarness["client"];
+    };
+
+    it("allows the listed keys on top of the defaults, in both scopes", () => {
+      harness.config.search = {
+        additionalBodyKeys: ["indices_boost", "rescore", "rescore"],
+      };
+      const { public: publicES, private: privateES } = scopes();
+
+      for (const driver of [publicES, privateES]) {
+        expect(driver.searchBodyKeys).toEqual(
+          expect.arrayContaining(["query", "min_score", "rescore"]),
+        );
+        expect(
+          driver.searchBodyKeys.filter((key: string) => key === "rescore"),
+        ).toHaveLength(1);
+        expect(() =>
+          driver._sanitizeSearchBody({ indices_boost: [], rescore: {} }),
+        ).not.toThrow();
+      }
+    });
+
+    it("allows the defaults only when the option is not set", () => {
+      expect(harness.client.searchBodyKeys).not.toContain("rescore");
+      expect(() => harness.client._sanitizeSearchBody({ rescore: {} })).toThrow(
+        expect.objectContaining({
+          id: "services.storage.invalid_search_query",
+        }),
+      );
+    });
+
+    it("still refuses an inline script under an added key", () => {
+      const driver = build(["script_fields"]);
+
+      expect(() =>
+        driver._sanitizeSearchBody({
+          script_fields: { foo: { script: { source: "1 + 1" } } },
+        }),
+      ).toThrow(
+        expect.objectContaining({
+          id: "services.storage.invalid_query_keyword",
+        }),
+      );
+    });
+
+    it("refuses to start on a value that is not an array of strings", () => {
+      for (const value of ["rescore", {}, [42], [""]]) {
+        expect(() => build(value)).toThrow(
+          `${configKey} must be an array of non-empty strings.`,
+        );
+      }
+    });
+
+    /* They would override what Kuzzle sets on every search request. */
+    it("refuses to start on a key Kuzzle sets itself", () => {
+      expect(() => build(["rescore", "index", "pit"])).toThrow(
+        `${configKey} cannot allow: index, pit.`,
+      );
+
+      for (const key of [
+        "profile",
+        "rest_total_hits_as_int",
+        "routing",
+        "scroll",
+        "track_total_hits",
+      ]) {
+        expect(() => build([key])).toThrow(`cannot allow: ${key}.`);
+      }
     });
   });
 
