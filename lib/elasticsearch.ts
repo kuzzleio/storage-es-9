@@ -59,6 +59,7 @@ import {
   extractFields,
   isPermanentConnectionError,
   isPlainObject,
+  loadSearchBodyKeys,
   randomNumber,
 } from "./helpers";
 import ESWrapper from "./esWrapper";
@@ -161,27 +162,9 @@ export class ES9 {
     this._esVersion = null;
     this._translator = new QueryTranslator();
 
-    // Allowed root key of a search query
-    this.searchBodyKeys = [
-      "aggregations",
-      "aggs",
-      "collapse",
-      "explain",
-      "fields",
-      "from",
-      "highlight",
-      "post_filter",
-      "query",
-      "search_after",
-      "search_timeout",
-      "size",
-      "sort",
-      "suggest",
-      "_name",
-      "_source",
-      "_source_excludes",
-      "_source_includes",
-    ];
+    // Allowed root key of a search query: the defaults, plus what the
+    // administrator added through `search.additionalBodyKeys`
+    this.searchBodyKeys = loadSearchBodyKeys(this._config);
 
     /**
      * Only allow stored-scripts in queries

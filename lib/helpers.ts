@@ -3,6 +3,7 @@
  * copied as they are: they are not part of what `kuzzle` exports.
  */
 
+import assert from "node:assert";
 import * as util from "node:util";
 
 import createDebugLogger from "debug";
@@ -191,4 +192,73 @@ export function errorMessage(error: unknown): string {
   const status = failure.statusCode ?? failure.meta?.statusCode;
 
   return status ? `${error.message} (HTTP ${String(status)})` : error.message;
+}
+
+// Allowed root keys of a search body. Inline scripts are refused anywhere in
+// the body whatever the key, by the driver's `_scriptCheck`.
+const SEARCH_BODY_KEYS = [
+  "aggregations",
+  "aggs",
+  "collapse",
+  "explain",
+  "fields",
+  "from",
+  "highlight",
+  "min_score",
+  "post_filter",
+  "query",
+  "search_after",
+  "search_timeout",
+  "size",
+  "sort",
+  "suggest",
+  "track_scores",
+  "_name",
+  "_source",
+  "_source_excludes",
+  "_source_includes",
+];
+
+// Root keys `search.additionalBodyKeys` cannot allow: they would override the
+// indice, the pagination or the response shape Kuzzle sets and relies on, or
+// expose its internal indice names.
+const FORBIDDEN_SEARCH_BODY_KEYS = [
+  "index",
+  "pit",
+  "profile",
+  "rest_total_hits_as_int",
+  "routing",
+  "scroll",
+  "track_total_hits",
+];
+
+/**
+ * Answers the allowed root keys of a search body: the defaults, plus the ones
+ * listed in `services.storageEngine.search.additionalBodyKeys`.
+ *
+ * Throws at startup on a malformed list, or on a key that would break what
+ * Kuzzle sets on every search request.
+ */
+export function loadSearchBodyKeys(storageConfig: unknown): string[] {
+  const configKey = "services.storageEngine.search.additionalBodyKeys";
+  const search = isPlainObject(storageConfig) ? storageConfig.search : null;
+  const additional =
+    (isPlainObject(search) ? search.additionalBodyKeys : null) ?? [];
+
+  assert(
+    Array.isArray(additional) &&
+      additional.every((key) => typeof key === "string" && key.length > 0),
+    `${configKey} must be an array of non-empty strings.`,
+  );
+
+  const forbidden = additional.filter((key) =>
+    FORBIDDEN_SEARCH_BODY_KEYS.includes(key),
+  );
+
+  assert(
+    forbidden.length === 0,
+    `${configKey} cannot allow: ${forbidden.join(", ")}.`,
+  );
+
+  return [...new Set([...SEARCH_BODY_KEYS, ...additional])];
 }
