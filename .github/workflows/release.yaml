@@ -56,12 +56,25 @@ jobs:
     needs: [npm-deploy]
     runs-on: ubuntu-24.04
     steps:
+      # A kuzzlebot installation token instead of the ACCESS_TOKEN_CI personal
+      # token: it expires within the hour, is scoped to kuzzleio/documentation
+      # and to `actions: write` (dispatching a workflow and following its run),
+      # and is tied to no one's account.
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ vars.KUZZLE_BOT_APP_ID }}
+          private-key: ${{ secrets.KUZZLE_BOT_PRIVATE_KEY }}
+          owner: kuzzleio
+          repositories: documentation
+          permission-actions: write
+
       # master deploys to docs.kuzzle.io, beta to next-docs.kuzzle.io
       - uses: convictional/trigger-workflow-and-wait@v1.6.3
         with:
           owner: kuzzleio
           repo: documentation
-          github_token: ${{ secrets.ACCESS_TOKEN_CI }}
+          github_token: ${{ steps.app-token.outputs.token }}
           workflow_file_name: child_repo.workflow.yml
           ref: ${{ github.ref_name == 'master' && 'master' || 'develop' }}
           client_payload: '{"repo_name":"storage-es-9","branch":"${{ github.ref_name }}","version":"1"}'
